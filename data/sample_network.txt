@@ -1,0 +1,31 @@
+# Network Routing Simulator — Sample Network Topology
+# 8 routers, 13 links
+# This topology is designed to demonstrate:
+#   - Dijkstra vs BFS giving different routes (Router 1 → Router 8)
+#   - Successful link-failure rerouting (remove link 3-5)
+#   - A disconnected-graph case (remove link 7-8 manually to isolate router 8)
+
+ROUTERS
+1 Alpha
+2 Bravo
+3 Charlie
+4 Delta
+5 Echo
+6 Foxtrot
+7 Golf
+8 Hotel
+
+LINKS
+1 2 4
+1 3 2
+2 3 1
+2 4 5
+3 5 8
+4 5 2
+4 6 6
+5 7 3
+5 8 10
+6 7 1
+6 8 9
+7 8 4
+1 4 15

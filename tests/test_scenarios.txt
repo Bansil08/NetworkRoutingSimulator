@@ -1,0 +1,101 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# TEST SCENARIOS — Network Routing & Failure Recovery Simulator
+# ─────────────────────────────────────────────────────────────────────────────
+# Load sample_network.txt first:
+#   ./NetworkRoutingSimulator data/sample_network.txt
+# Then walk through the scenarios below using the menu.
+# ─────────────────────────────────────────────────────────────────────────────
+
+SCENARIO 1 — Dijkstra: Router 1 → Router 8
+Expected: Cheapest path by link weight.
+Steps:
+  Menu 6 → Select 1 (Dijkstra)
+  Menu 5 → Source: 1, Destination: 8
+Expected path: Alpha[1] → Charlie[3] → Delta... actually:
+  1→2→3 cost 5, then 3→5 cost 8 then 5→7 cost 3, 7→8 cost 4 = total 20
+  OR 1→3→5 cost 10, 5→7 cost 3, 7→8 cost 4 = total 17
+  Dijkstra result: 1→3→(4 via 1-2-3 or direct?) - let the simulator decide.
+  Correct Dijkstra answer: Alpha → Charlie → Echo → Golf → Hotel, cost = 17
+  BFS answer (fewest hops): 3 hops: Alpha → Charlie → Echo → Hotel
+  (BFS finds 1→3→5→8 in 3 hops, cost=20 via weights, vs Dijkstra's 4 hops cost 17)
+  → DIFFERENT results: demonstrates why algorithm choice matters!
+
+SCENARIO 2 — BFS: Router 1 → Router 8
+Expected: Fewest hops path.
+Steps:
+  Menu 6 → Select 2 (BFS)
+  Menu 5 → Source: 1, Destination: 8
+Expected: 3 hops → Alpha → Charlie → Echo → Hotel (cost 20 by weight, but fewer hops)
+
+SCENARIO 3 — Packet Transmission
+Steps:
+  Menu 6 → Select 1 (Dijkstra)
+  Menu 7 → Source: 1, Destination: 8, Priority: 3
+Expected: Packet delivered, route displayed, statistics updated.
+
+SCENARIO 4 — Link Failure with Rerouting
+(Assumes Packet was just sent from 1→8 using the Dijkstra path above)
+Steps:
+  Menu 8 → Source: 5, Destination: 7  (remove link Echo-Golf from route)
+Expected:
+  - LINK FAILURE DETECTED
+  - Previous route displayed
+  - New route computed (alternative around the failure)
+  - reroutedPackets++ in statistics
+
+SCENARIO 5 — Link Failure causing Unreachable Destination
+Steps:
+  First isolate Router 8 by removing all its links:
+    Menu 3 → 7 8
+    Menu 3 → 5 8
+    Menu 3 → 6 8
+  Menu 7 → Source: 1, Destination: 8
+Expected: No route found, failedPackets++
+
+SCENARIO 6 — Connectivity Check
+Steps:
+  Start with full sample_network.txt loaded
+  Menu 9 → All 8 routers should be reachable (CONNECTED)
+
+SCENARIO 7 — Disconnected Connectivity Check
+Steps:
+  Isolate Router 8 (remove links 5-8, 6-8, 7-8)
+  Menu 9 → Should show DISCONNECTED, Router 8 listed as unreachable.
+
+SCENARIO 8 — Kruskal MST on Connected Network
+Steps:
+  Load sample_network.txt fresh
+  Menu 10
+Expected: MST with 7 edges connecting all 8 routers at minimum total cost.
+
+SCENARIO 9 — Kruskal MST on Disconnected Network
+Steps:
+  Isolate Router 8 (remove links 5-8, 6-8, 7-8)
+  Menu 10
+Expected: Error — cannot form MST, network is disconnected.
+
+SCENARIO 10 — File Save and Reload
+Steps:
+  Menu 13 → Save to "data/my_network.txt"
+  Menu 12 → Load from "data/my_network.txt"
+Expected: Network reloaded correctly.
+
+SCENARIO 11 — Edge Case: Duplicate Router ID
+Steps:
+  Menu 1 → ID: 1, Name: Alpha2  (ID 1 already exists)
+Expected: [Error] Router with ID 1 already exists.
+
+SCENARIO 12 — Edge Case: Negative Weight
+Steps:
+  Menu 2 → Source: 1, Destination: 2, Weight: -5
+Expected: [Error] Negative link weights are not supported.
+
+SCENARIO 13 — Edge Case: Self-Loop
+Steps:
+  Menu 2 → Source: 1, Destination: 1, Weight: 3
+Expected: [Error] Self-loops are not allowed.
+
+SCENARIO 14 — Edge Case: Duplicate Link
+Steps:
+  Menu 2 → Source: 1, Destination: 2, Weight: 99  (link 1-2 already exists)
+Expected: [Error] Link already exists.
