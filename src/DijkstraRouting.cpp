@@ -17,6 +17,10 @@ RouteResult DijkstraRouting::findRoute(
 ) const {
     RouteResult result;
 
+    if (!graph.hasRouter(source) || !graph.hasRouter(destination)) {
+        return result;
+    }
+
     using Entry = std::pair<long long, int>;
     std::priority_queue<Entry, std::vector<Entry>, std::greater<Entry>> minHeap;
 
@@ -50,7 +54,7 @@ RouteResult DijkstraRouting::findRoute(
         }
     }
 
-    if (dist.count(destination) == 0 || dist[destination] == INF) {
+    if (dist[destination] == INF) {
         result.pathFound = false;
         return result;
     }

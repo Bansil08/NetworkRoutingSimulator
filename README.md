@@ -4,6 +4,7 @@
 
 **A C++17 command-line simulator that models a computer network as a weighted undirected graph.**
 
+[![CI](https://github.com/Bansil08/NetworkRoutingSimulator/actions/workflows/ci.yml/badge.svg)](https://github.com/Bansil08/NetworkRoutingSimulator/actions/workflows/ci.yml)
 [![Language](https://img.shields.io/badge/Language-C%2B%2B17-blue?style=for-the-badge&logo=cplusplus)](https://en.cppreference.com/w/cpp/17)
 [![Build](https://img.shields.io/badge/Build-CMake-red?style=for-the-badge&logo=cmake)](https://cmake.org/)
 [![OOP](https://img.shields.io/badge/Paradigm-OOP-green?style=for-the-badge)]()
@@ -42,16 +43,36 @@ The network is modelled as a **weighted, undirected graph** — routers are vert
 | 💾 **File I/O** | Load and save network topology in a simple human-readable format |
 | 🛡️ **Input Validation** | Handles duplicate IDs, self-loops, negative weights, missing routers, and more |
 | 📊 **Live Statistics** | Tracks routers, links, packets sent/delivered/failed/rerouted |
+| 🧪 **Tested & CI** | 53 GoogleTest unit tests + 24 end-to-end CLI tests, run on Linux and macOS (plus ASan/UBSan) via GitHub Actions |
 
 ---
 
 ## 🏗️ Project Architecture
 
+### Layered Design
+
+The code is split into a **pure-logic core** and a thin **console front-end**:
+
+```
+   ┌──────────────────────────┐        ┌──────────────────────────────┐
+   │        ConsoleUI         │ drives │       NetworkSimulator       │
+   │──────────────────────────│───────▶│──────────────────────────────│
+   │ all std::cin / std::cout │        │ no I/O — returns Status and  │
+   │ menu, prompts, messages  │        │ result structs (RouteQuery,  │
+   └──────────────────────────┘        │ PacketReport, MstResult ...) │
+                                       └──────────────────────────────┘
+        src/ConsoleUI.cpp                 routing_core library
+```
+
+- The core never prints. Every operation returns a `Status` enum or a result struct, and `ConsoleUI` decides how to present it.
+- The core builds as a separate library (`routing_core`), which is what the unit tests link against — no screen-scraping needed.
+- Swapping the console for a GUI, web API, or test harness requires **zero changes** to the routing logic.
+
 ### Class Diagram
 
 ```
                     ┌─────────────────────────────┐
-                    │       NetworkSimulator       │  ← Main controller
+                    │       NetworkSimulator       │  ← Core logic (no I/O)
                     │─────────────────────────────│
                     │ - network: Graph             │
                     │ - routingStrategy: unique_ptr│
@@ -110,8 +131,9 @@ When routing:
 ```
 NetworkRoutingSimulator/
 │
-├── CMakeLists.txt            ← Build config (C++17, -Wall -Wextra)
+├── CMakeLists.txt            ← Build config (C++17, -Wall -Wextra, GoogleTest)
 ├── README.md
+├── .github/workflows/ci.yml  ← Build + test on Ubuntu and macOS
 │
 ├── include/                  ← All class declarations (.h files)
 │   ├── Packet.h              ← Data unit (packetId, src, dst, priority)
@@ -123,7 +145,9 @@ NetworkRoutingSimulator/
 │   ├── DijkstraRouting.h     ← Minimum-cost routing (inherits RoutingStrategy)
 │   ├── BFSRouting.h          ← Minimum-hop routing  (inherits RoutingStrategy)
 │   ├── DisjointSet.h         ← Union-Find for Kruskal's MST
-│   └── NetworkSimulator.h    ← Main controller class
+│   ├── Status.h              ← Error/result codes returned by the core
+│   ├── NetworkSimulator.h    ← Core logic + result structs (no I/O)
+│   └── ConsoleUI.h           ← Interactive menu / all console I/O
 │
 ├── src/                      ← All implementations (.cpp files)
 │   ├── main.cpp
@@ -132,13 +156,16 @@ NetworkRoutingSimulator/
 │   ├── DijkstraRouting.cpp
 │   ├── BFSRouting.cpp
 │   ├── DisjointSet.cpp
-│   └── NetworkSimulator.cpp
+│   ├── NetworkSimulator.cpp
+│   └── ConsoleUI.cpp
 │
 ├── data/
 │   └── sample_network.txt    ← 8 routers, 13 links — ready to demo everything
 │
 └── tests/
-    └── test_scenarios.txt    ← Step-by-step test guide
+    ├── unit/                 ← GoogleTest unit tests (Graph, routing, DSU, simulator)
+    ├── run_tests.sh          ← End-to-end tests driving the real binary
+    └── test_scenarios.txt    ← Step-by-step manual test guide
 ```
 
 ---
@@ -152,6 +179,7 @@ NetworkRoutingSimulator/
 | **Inheritance** | `DijkstraRouting` and `BFSRouting` both inherit from `RoutingStrategy` and override `findRoute()` |
 | **Runtime Polymorphism** | `NetworkSimulator` holds `unique_ptr<RoutingStrategy>`; C++ vtable dispatches `findRoute()` to the correct subclass at runtime |
 | **Composition** | `NetworkSimulator` *owns* a `Graph` and a `RoutingStrategy` — it composes them rather than inheriting |
+| **Separation of Concerns** | `NetworkSimulator` holds only logic; `ConsoleUI` handles all input/output |
 
 ---
 
@@ -263,6 +291,7 @@ Complexity per operation:  O(α(V)) ≈ O(1) for all practical inputs
 ### Prerequisites
 - **C++17** compiler — Apple Clang / GCC 7+ / Clang 5+
 - **CMake 3.14+**
+- Internet access on first configure (CMake downloads GoogleTest). Pass `-DBUILD_TESTS=OFF` to skip.
 
 ### Build
 
@@ -285,6 +314,26 @@ cmake --build .
 # Empty network (add routers/links manually)
 ./NetworkRoutingSimulator
 ```
+
+---
+
+## 🧪 Testing
+
+```bash
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+| Suite | What it covers |
+|---|---|
+| `tests/unit/GraphTest.cpp` | Router/link validation, undirected links, edge listing |
+| `tests/unit/RoutingTest.cpp` | Dijkstra vs BFS paths and costs, unreachable targets, Strategy swap |
+| `tests/unit/DisjointSetTest.cpp` | Union-find merging, cycle detection, non-contiguous IDs |
+| `tests/unit/NetworkSimulatorTest.cpp` | Packets & stats, link failure rerouting, connectivity, MST, save/load round-trip |
+| `tests/run_tests.sh` | 24 end-to-end scenarios piping menu input into the real binary |
+
+Every push and pull request runs the full suite on **Ubuntu and macOS** with warnings treated as errors, plus a separate run under **AddressSanitizer and UndefinedBehaviorSanitizer**.
 
 ---
 
@@ -394,26 +443,27 @@ Kruskal  MST:  7 edges connecting all 8 routers     cost = 18
 
 ```
 main()
-  └── NetworkSimulator simulator         (constructor sets Dijkstra as default)
-  └── simulator.loadFromFile(...)        (optional: load topology from file)
-  └── simulator.run()                    (interactive loop)
+  └── NetworkSimulator simulator         (core; constructor sets Dijkstra as default)
+  └── ConsoleUI ui(simulator)            (front-end wrapping the core)
+  └── ui.loadFromFile(...)               (optional: load topology from file)
+  └── ui.run()                           (interactive loop)
         └── displayMenu()
         └── read user choice
         └── switch(choice):
               case 7 (Send Packet):
-                sendPacket(id, src, dst, priority)
-                  └── findAndDisplayRoute(src, dst)
+                ConsoleUI::sendPacket()
+                  └── simulator.sendPacket(src, dst, priority) → PacketReport
                         └── routingStrategy->findRoute(graph, src, dst)
                               └── [Dijkstra or BFS depending on current strategy]
-                        └── display path + cost
-                  └── update statistics, save lastRoute
+                        └── update statistics, save lastRoute
+                  └── print path + cost from the report
               case 8 (Link Failure):
-                simulateLinkFailure(src, dst)
-                  └── check if link exists
-                  └── check if lastRoute uses this link
-                  └── graph.removeLink(src, dst)
-                  └── routingStrategy->findRoute(...)  [reroute]
-                  └── display new route or "unreachable"
+                ConsoleUI::simulateLinkFailure()
+                  └── simulator.simulateLinkFailure(src, dst) → LinkFailureReport
+                        └── check link exists / whether lastRoute uses it
+                        └── graph.removeLink(src, dst)
+                        └── routingStrategy->findRoute(...)  [reroute]
+                  └── print new route or "unreachable"
 ```
 
 ---
@@ -432,7 +482,10 @@ main()
 **Q4: What does the Strategy Pattern give you here?**
 > You can swap routing algorithms at runtime without modifying `NetworkSimulator`. Adding a new algorithm (e.g., Bellman-Ford) only requires creating a new subclass — no changes to existing code (Open/Closed Principle).
 
-**Q5: Why does DSU need path compression and union by rank?**
+**Q5: Why does the core return result structs instead of printing?**
+> Mixing logic with `std::cout` makes code untestable and ties it to one interface. The core returns a `Status` or a report struct; `ConsoleUI` formats it. The unit tests assert on those structs directly, and a GUI or REST API could reuse the core unchanged.
+
+**Q6: Why does DSU need path compression and union by rank?**
 > Without them, `find()` degrades to O(n) in the worst case (a long chain of parents). Path compression flattens the tree on each `find()`. Union by rank prevents trees from growing tall. Together they give O(α(n)) ≈ O(1) per operation.
 
 ---
@@ -450,7 +503,7 @@ main()
 - [ ] Bellman-Ford as a third routing strategy
 - [ ] ASCII network graph visualization
 - [ ] Priority-based packet queuing at each router
-- [ ] Unit tests with GoogleTest or Catch2
+- [x] Unit tests with GoogleTest + CI on Linux and macOS
 
 ---
 

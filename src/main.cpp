@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include "NetworkSimulator.h"
+#include "ConsoleUI.h"
 
 int main(int argc, char* argv[]) {
     std::cout << "\n";
@@ -11,11 +12,12 @@ int main(int argc, char* argv[]) {
     std::cout << "  ╚══════════════════════════════════════════════╝\n\n";
 
     NetworkSimulator simulator;
+    ConsoleUI ui(simulator);
 
     if (argc == 2) {
         std::string filename(argv[1]);
         std::cout << "  Loading network from: " << filename << "\n";
-        if (!simulator.loadFromFile(filename)) {
+        if (!ui.loadFromFile(filename)) {
             std::cout << "  [Warning] Could not load file. Starting with an empty network.\n";
         }
     } else {
@@ -23,6 +25,6 @@ int main(int argc, char* argv[]) {
         std::cout << "       to auto-load the sample topology.\n";
     }
 
-    simulator.run();
+    ui.run();
     return 0;
 }
