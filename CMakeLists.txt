@@ -44,10 +44,12 @@ file(COPY ${CMAKE_SOURCE_DIR}/data DESTINATION ${CMAKE_BINARY_DIR})
 
 if (BUILD_TESTS)
     include(FetchContent)
+    if (POLICY CMP0135)
+        cmake_policy(SET CMP0135 NEW)  # timestamp extracted files (CMake 3.24+)
+    endif()
     FetchContent_Declare(
         googletest
         URL https://github.com/google/googletest/archive/refs/tags/v1.15.2.tar.gz
-        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     )
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)

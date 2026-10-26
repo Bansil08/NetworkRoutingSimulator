@@ -3,7 +3,7 @@
 # This topology is designed to demonstrate:
 #   - Dijkstra vs BFS giving different routes (Router 1 → Router 8)
 #   - Successful link-failure rerouting (remove link 3-5)
-#   - A disconnected-graph case (remove link 7-8 manually to isolate router 8)
+#   - A disconnected-graph case (remove links 5-8, 6-8 and 7-8 to isolate router 8)
 
 ROUTERS
 1 Alpha

@@ -4,6 +4,13 @@
 
 #include <iostream>
 #include <iomanip>
+#include <stdexcept>
+
+namespace {
+// Thrown when stdin closes mid-prompt so a half-entered command is abandoned
+// instead of running with made-up values.
+struct InputClosed {};
+}
 
 ConsoleUI::ConsoleUI(NetworkSimulator& simulator) : simulator(simulator) {}
 
@@ -83,7 +90,8 @@ void ConsoleUI::addRouter() {
     std::string name = promptLine("  Router Name : ");
     Status status = simulator.addRouter(id, name);
     if (status != Status::Ok) { printError(status, id); return; }
-    std::cout << "  [OK] Router [" << id << "] '" << name << "' added.\n";
+    std::cout << "  [OK] Router [" << id << "] '"
+              << simulator.getNetwork().getRouter(id).getName() << "' added.\n";
 }
 
 void ConsoleUI::addLink() {
@@ -352,24 +360,38 @@ void ConsoleUI::saveToFile() {
 
 // ── Input helpers ────────────────────────────────────────────────────────────
 
+// Accepts only a whole integer, optionally surrounded by whitespace:
+// "12" and " 12 " are fine, "12abc" and "1.5" are rejected.
+std::optional<int> ConsoleUI::parseInt(const std::string& text) {
+    try {
+        size_t consumed = 0;
+        int value = std::stoi(text, &consumed);
+        if (text.find_first_not_of(" \t", consumed) != std::string::npos) return std::nullopt;
+        return value;
+    } catch (const std::logic_error&) {  // invalid_argument or out_of_range
+        return std::nullopt;
+    }
+}
+
+std::string ConsoleUI::readLine() {
+    std::string line;
+    if (!std::getline(std::cin, line)) throw InputClosed{};
+    if (!line.empty() && line.back() == '\r') line.pop_back();
+    return line;
+}
+
 std::string ConsoleUI::promptLine(const std::string& prompt) {
     std::cout << prompt;
-    std::string line;
-    std::getline(std::cin, line);
-    return line;
+    return readLine();
 }
 
 int ConsoleUI::promptInt(const std::string& prompt) {
     while (true) {
         std::cout << prompt;
-        std::string line;
-        if (!std::getline(std::cin, line)) return 0;  // EOF: let run() exit
-        if (line.empty()) continue;
-        try {
-            return std::stoi(line);
-        } catch (...) {
-            std::cout << "  [Error] Please enter a valid integer.\n";
-        }
+        std::string line = readLine();
+        if (line.find_first_not_of(" \t") == std::string::npos) continue;
+        if (auto value = parseInt(line)) return *value;
+        std::cout << "  [Error] Please enter a valid integer.\n";
     }
 }
 
@@ -403,39 +425,40 @@ void ConsoleUI::displayMenu() const {
 }
 
 void ConsoleUI::run() {
-    std::string choiceStr;
-    while (true) {
-        displayMenu();
-        if (!std::getline(std::cin, choiceStr)) {
-            std::cout << "\n  Input closed. Goodbye!\n\n";
-            return;
+    try {
+        while (true) {
+            displayMenu();
+            int choice = parseInt(readLine()).value_or(-1);
+            std::cout << "\n";
+            if (!handleChoice(choice)) return;
         }
-
-        int choice = -1;
-        try { choice = std::stoi(choiceStr); } catch (...) {}
-
-        std::cout << "\n";
-
-        switch (choice) {
-            case 1:  addRouter();              break;
-            case 2:  addLink();                break;
-            case 3:  removeLink();             break;
-            case 4:  displayTopology();        break;
-            case 5:  findRoute();              break;
-            case 6:  changeAlgorithm();        break;
-            case 7:  sendPacket();             break;
-            case 8:  simulateLinkFailure();    break;
-            case 9:  checkConnectivity();      break;
-            case 10: findMinimumCostNetwork(); break;
-            case 11: displayStatistics();      break;
-            case 12: loadFromFile(promptLine("  Filename: ")); break;
-            case 13: saveToFile();             break;
-            case 0:
-                std::cout << "  Goodbye!\n\n";
-                return;
-            default:
-                std::cout << "  [Error] Invalid menu choice. Enter 0–13.\n";
-                break;
-        }
+    } catch (const InputClosed&) {
+        std::cout << "\n  Input closed. Goodbye!\n\n";
     }
+}
+
+// Runs one menu action. Returns false when the user chose to exit.
+bool ConsoleUI::handleChoice(int choice) {
+    switch (choice) {
+        case 1:  addRouter();              break;
+        case 2:  addLink();                break;
+        case 3:  removeLink();             break;
+        case 4:  displayTopology();        break;
+        case 5:  findRoute();              break;
+        case 6:  changeAlgorithm();        break;
+        case 7:  sendPacket();             break;
+        case 8:  simulateLinkFailure();    break;
+        case 9:  checkConnectivity();      break;
+        case 10: findMinimumCostNetwork(); break;
+        case 11: displayStatistics();      break;
+        case 12: loadFromFile(promptLine("  Filename: ")); break;
+        case 13: saveToFile();             break;
+        case 0:
+            std::cout << "  Goodbye!\n\n";
+            return false;
+        default:
+            std::cout << "  [Error] Invalid menu choice. Enter 0–13.\n";
+            break;
+    }
+    return true;
 }

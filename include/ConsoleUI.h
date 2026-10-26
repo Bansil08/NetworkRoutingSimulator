@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <vector>
 #include "NetworkSimulator.h"
@@ -29,11 +30,14 @@ private:
     void displayStatistics() const;
     void saveToFile();
 
+    bool handleChoice(int choice);
     void displayMenu() const;
     bool printRoute(int source, int destination, const RouteQuery& query) const;
     void printPath(const std::vector<int>& path) const;
     static void printError(Status status, int first = 0, int second = 0);
 
-    static std::string promptLine(const std::string& prompt);
-    static int         promptInt(const std::string& prompt);
+    static std::optional<int> parseInt(const std::string& text);
+    static std::string        readLine();
+    static std::string        promptLine(const std::string& prompt);
+    static int                promptInt(const std::string& prompt);
 };

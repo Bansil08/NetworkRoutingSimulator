@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <stack>
 #include <unordered_set>
 #include <vector>
 
@@ -130,11 +131,20 @@ ConnectivityReport NetworkSimulator::checkConnectivity() const {
     return report;
 }
 
+// Iterative DFS with an explicit stack: recursion would overflow the call
+// stack on long chains of routers.
 void NetworkSimulator::dfsVisit(int routerId, std::unordered_set<int>& visited) const {
+    std::stack<int> pending;
+    pending.push(routerId);
     visited.insert(routerId);
-    for (const auto& [neighbour, weight] : network.getNeighbours(routerId)) {
-        if (!visited.count(neighbour)) {
-            dfsVisit(neighbour, visited);
+
+    while (!pending.empty()) {
+        int u = pending.top();
+        pending.pop();
+        for (const auto& [neighbour, weight] : network.getNeighbours(u)) {
+            if (visited.insert(neighbour).second) {
+                pending.push(neighbour);
+            }
         }
     }
 }

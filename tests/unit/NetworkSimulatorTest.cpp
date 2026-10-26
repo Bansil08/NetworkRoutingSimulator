@@ -126,6 +126,21 @@ TEST_F(NetworkSimulatorTest, DetectsDisconnectedRouter) {
     EXPECT_EQ(r.unreachable, (std::vector<int>{8}));
 }
 
+TEST(NetworkSimulatorScaleTest, ConnectivityOnLongChainDoesNotOverflowStack) {
+    const int routers = 300000;  // deep enough to crash a recursive DFS
+    std::stringstream in;
+    in << "ROUTERS\n";
+    for (int i = 0; i < routers; ++i) in << i << " R\n";
+    in << "LINKS\n";
+    for (int i = 0; i + 1 < routers; ++i) in << i << " " << i + 1 << " 1\n";
+
+    NetworkSimulator sim;
+    sim.loadFromStream(in);
+    ConnectivityReport r = sim.checkConnectivity();
+    EXPECT_TRUE(r.isConnected());
+    EXPECT_EQ(r.reachableCount, routers);
+}
+
 TEST_F(NetworkSimulatorTest, MinimumSpanningTreeOfSampleNetwork) {
     MstResult mst = sim.findMinimumCostNetwork();
     ASSERT_TRUE(mst.connected);

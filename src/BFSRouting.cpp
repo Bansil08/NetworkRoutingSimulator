@@ -17,6 +17,12 @@ RouteResult BFSRouting::findRoute(
 ) const {
     RouteResult result;
 
+    if (source == destination) {
+        result.pathFound = graph.hasRouter(source);
+        if (result.pathFound) result.path = {source};
+        return result;
+    }
+
     std::queue<int>             bfsQueue;
     std::unordered_set<int>     visited;
     std::unordered_map<int,int> parent;

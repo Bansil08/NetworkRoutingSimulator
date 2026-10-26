@@ -2,10 +2,13 @@
 #include <algorithm>
 
 Status Graph::addRouter(int id, const std::string& name) {
-    if (name.find_first_not_of(" \t") == std::string::npos) return Status::EmptyRouterName;
+    const char* whitespace = " \t";
+    size_t first = name.find_first_not_of(whitespace);
+    if (first == std::string::npos) return Status::EmptyRouterName;
     if (routers.count(id)) return Status::DuplicateRouter;
 
-    routers.emplace(id, Router(id, name));
+    size_t last = name.find_last_not_of(whitespace);
+    routers.emplace(id, Router(id, name.substr(first, last - first + 1)));
     adjacencyList[id];
     return Status::Ok;
 }

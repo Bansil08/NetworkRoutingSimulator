@@ -81,6 +81,39 @@ TEST(BFSRoutingTest, ReportsUnreachableDestination) {
     EXPECT_FALSE(BFSRouting().findRoute(graph, 1, 2).pathFound);
 }
 
+TEST(BFSRoutingTest, RouteToSelfIsTrivial) {
+    Graph graph;
+    graph.addRouter(1, "A");
+    RouteResult r = BFSRouting().findRoute(graph, 1, 1);
+    ASSERT_TRUE(r.pathFound);
+    EXPECT_EQ(r.path, (Path{1}));
+    EXPECT_EQ(r.totalCost, 0);
+}
+
+// ── Both algorithms must agree on edge cases ─────────────────────────────────
+
+class AnyRoutingTest : public ::testing::TestWithParam<std::shared_ptr<RoutingStrategy>> {};
+
+TEST_P(AnyRoutingTest, RouteToSelfIsSingleRouter) {
+    Graph graph;
+    graph.addRouter(1, "A");
+    RouteResult r = GetParam()->findRoute(graph, 1, 1);
+    ASSERT_TRUE(r.pathFound);
+    EXPECT_EQ(r.path, (Path{1}));
+}
+
+TEST_P(AnyRoutingTest, UnknownRoutersHaveNoRoute) {
+    Graph graph;
+    graph.addRouter(1, "A");
+    EXPECT_FALSE(GetParam()->findRoute(graph, 1, 99).pathFound);
+    EXPECT_FALSE(GetParam()->findRoute(graph, 99, 1).pathFound);
+    EXPECT_FALSE(GetParam()->findRoute(graph, 99, 99).pathFound);
+}
+
+INSTANTIATE_TEST_SUITE_P(Algorithms, AnyRoutingTest, ::testing::Values(
+    std::make_shared<DijkstraRouting>(),
+    std::make_shared<BFSRouting>()));
+
 // ── Strategy pattern ─────────────────────────────────────────────────────────
 
 TEST(RoutingStrategyTest, AlgorithmsDisagreeOnSampleNetwork) {

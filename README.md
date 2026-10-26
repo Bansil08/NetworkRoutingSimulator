@@ -43,7 +43,7 @@ The network is modelled as a **weighted, undirected graph** — routers are vert
 | 💾 **File I/O** | Load and save network topology in a simple human-readable format |
 | 🛡️ **Input Validation** | Handles duplicate IDs, self-loops, negative weights, missing routers, and more |
 | 📊 **Live Statistics** | Tracks routers, links, packets sent/delivered/failed/rerouted |
-| 🧪 **Tested & CI** | 46 GoogleTest unit tests + 20 end-to-end CLI tests, run on Linux and macOS via GitHub Actions |
+| 🧪 **Tested & CI** | 53 GoogleTest unit tests + 24 end-to-end CLI tests, run on Linux and macOS (plus ASan/UBSan) via GitHub Actions |
 
 ---
 
@@ -331,9 +331,9 @@ ctest --test-dir build --output-on-failure
 | `tests/unit/RoutingTest.cpp` | Dijkstra vs BFS paths and costs, unreachable targets, Strategy swap |
 | `tests/unit/DisjointSetTest.cpp` | Union-find merging, cycle detection, non-contiguous IDs |
 | `tests/unit/NetworkSimulatorTest.cpp` | Packets & stats, link failure rerouting, connectivity, MST, save/load round-trip |
-| `tests/run_tests.sh` | 20 end-to-end scenarios piping menu input into the real binary |
+| `tests/run_tests.sh` | 24 end-to-end scenarios piping menu input into the real binary |
 
-Every push and pull request runs the full suite on **Ubuntu and macOS** with warnings treated as errors.
+Every push and pull request runs the full suite on **Ubuntu and macOS** with warnings treated as errors, plus a separate run under **AddressSanitizer and UndefinedBehaviorSanitizer**.
 
 ---
 

@@ -24,6 +24,11 @@ TEST_F(GraphTest, AddRouterAcceptsNamesWithSpaces) {
     EXPECT_EQ(graph.getRouter(9).getName(), "New York");
 }
 
+TEST_F(GraphTest, TrimsSurroundingWhitespaceFromNames) {
+    ASSERT_EQ(graph.addRouter(9, "  Lima \t"), Status::Ok);
+    EXPECT_EQ(graph.getRouter(9).getName(), "Lima");
+}
+
 TEST_F(GraphTest, RejectsDuplicateRouter) {
     EXPECT_EQ(graph.addRouter(1, "Other"), Status::DuplicateRouter);
     EXPECT_EQ(graph.getRouter(1).getName(), "Alpha");
