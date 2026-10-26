@@ -28,6 +28,10 @@ const std::string& NetworkSimulator::getCurrentAlgorithmName() const {
 }
 
 void NetworkSimulator::addRouter(int id, const std::string& name) {
+    if (name.find_first_not_of(" \t") == std::string::npos) {
+        std::cout << "  [Error] Router name cannot be empty.\n";
+        return;
+    }
     if (network.addRouter(id, name)) {
         std::cout << "  [OK] Router [" << id << "] '" << name << "' added.\n";
     }
@@ -123,7 +127,7 @@ void NetworkSimulator::sendPacket(int packetId, int source, int destination, int
     ++successfulPackets;
 
     std::cout << "  Traversal : ";
-    for (int i = 0; i < static_cast<int>(result.path.size()); ++i) {
+    for (size_t i = 0; i < result.path.size(); ++i) {
         if (i > 0) std::cout << " → ";
         std::cout << network.getRouter(result.path[i]).getName();
     }
@@ -328,7 +332,7 @@ bool NetworkSimulator::loadFromFile(const std::string& filename) {
         std::istringstream iss(line);
         if (section == "ROUTERS") {
             int id; std::string name;
-            if (iss >> id >> name) {
+            if (iss >> id >> std::ws && std::getline(iss, name) && !name.empty()) {
                 network.addRouter(id, name);
             } else {
                 std::cout << "  [Warning] Malformed router line: " << line << "\n";
@@ -376,7 +380,7 @@ bool NetworkSimulator::saveToFile(const std::string& filename) const {
 }
 
 void NetworkSimulator::printPath(const std::vector<int>& path) const {
-    for (int i = 0; i < static_cast<int>(path.size()); ++i) {
+    for (size_t i = 0; i < path.size(); ++i) {
         if (i > 0) std::cout << " → ";
         int id = path[i];
         if (network.hasRouter(id)) {
@@ -390,7 +394,7 @@ void NetworkSimulator::printPath(const std::vector<int>& path) const {
 
 bool NetworkSimulator::linkIsOnRoute(const RouteResult& route, int src, int dst) const {
     const auto& path = route.path;
-    for (int i = 0; i + 1 < static_cast<int>(path.size()); ++i) {
+    for (size_t i = 0; i + 1 < path.size(); ++i) {
         int u = path[i], v = path[i + 1];
         if ((u == src && v == dst) || (u == dst && v == src)) return true;
     }
@@ -408,7 +412,7 @@ int NetworkSimulator::promptInt(const std::string& prompt) {
     while (true) {
         std::cout << prompt;
         std::string line;
-        std::getline(std::cin, line);
+        if (!std::getline(std::cin, line)) return 0;  // EOF: let run() exit
         if (line.empty()) continue;
         try {
             return std::stoi(line);
@@ -425,7 +429,7 @@ void NetworkSimulator::displayMenu() const {
     std::cout << "  ║              SIMULATOR                       ║\n";
     std::cout << "  ╠══════════════════════════════════════════════╣\n";
     std::cout << "  ║  Active Algorithm: " << std::left << std::setw(26)
-              << currentAlgorithmName << "║\n";
+              << currentAlgorithmName << std::right << "║\n";
     std::cout << "  ╠══════════════════════════════════════════════╣\n";
     std::cout << "  ║  1.  Add Router                              ║\n";
     std::cout << "  ║  2.  Add Network Link                        ║\n";
@@ -449,7 +453,10 @@ void NetworkSimulator::run() {
     std::string choiceStr;
     while (true) {
         displayMenu();
-        std::getline(std::cin, choiceStr);
+        if (!std::getline(std::cin, choiceStr)) {
+            std::cout << "\n  Input closed. Goodbye!\n\n";
+            return;
+        }
 
         int choice = -1;
         try { choice = std::stoi(choiceStr); } catch (...) {}
