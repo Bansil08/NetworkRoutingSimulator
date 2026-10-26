@@ -60,7 +60,7 @@ RouteResult BFSRouting::findRoute(
     std::reverse(result.path.begin(), result.path.end());
 
     result.totalCost = 0;
-    for (int i = 0; i + 1 < static_cast<int>(result.path.size()); ++i) {
+    for (size_t i = 0; i + 1 < result.path.size(); ++i) {
         int from = result.path[i];
         int to   = result.path[i + 1];
         for (const auto& [neighbour, w] : graph.getNeighbours(from)) {

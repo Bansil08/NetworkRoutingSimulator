@@ -19,7 +19,7 @@ public:
     void display() const;
 
 private:
-    int id;
+    int id = 0;
     std::string name;
     std::queue<Packet> packetQueue;
 };
